@@ -14,6 +14,7 @@ const int green_pin = 16;
 const int rotor_button_pin = A0;
 const int rotor_a_pin = A1;
 const int rotor_b_pin = A2;
+const int relay_pin = A3;
 
 Button pir;
 Button red;
@@ -25,6 +26,8 @@ RotaryEncoderAcelleration rotor;
 long rotor_old_pos = 0;
 long rotor_new_pos = 0;
 
+unsigned long relay_off_time = 0;
+
 void setup() {
 
   // set up the LCD's number of columns and rows: 
@@ -33,6 +36,7 @@ void setup() {
   // output pins with default values
   pinMode(contrast_pin, OUTPUT); analogWrite(contrast_pin, 10);
   pinMode(backlight_pin, OUTPUT); analogWrite(backlight_pin, 255);
+  pinMode(relay_pin, OUTPUT); digitalWrite(relay_pin, LOW);
   
   // input pints with internal pull-ups
   pinMode(pir_pin, INPUT_PULLUP);
@@ -99,6 +103,19 @@ void loop() {
         val = Serial.read();
         analogWrite(contrast_pin, val);
         break;
+      case 0x05:
+        // Relay
+        val = Serial.read();
+        if (val==0) {
+          digitalWrite(relay_pin, LOW);
+          relay_off_time = 0;
+        } else if (val==255) {
+          digitalWrite(relay_pin, HIGH);
+          relay_off_time = 0;
+        } else {
+          digitalWrite(relay_pin, HIGH);
+          relay_off_time = millis()+(val*1000);
+        }
     }
   }
 
@@ -145,6 +162,13 @@ void loop() {
   if (rotor_new_pos >= 90 || rotor_new_pos < -90) {
     rotor.setPosition(0);
     rotor_old_pos = 0;
+  }
+  
+  if (relay_off_time != 0) {
+    if (millis() > relay_off_time) {
+      digitalWrite(relay_pin, LOW);
+      relay_off_time = 0;
+    }
   }
   
 }
