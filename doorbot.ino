@@ -8,7 +8,7 @@ LiquidCrystal lcd(7, 8, 2, 3, 4, 5);
 
 const int contrast_pin = 6;
 const int backlight_pin = 9;
-const int pir_pin = 15;
+const int intercom_pin = 15;
 const int red_pin = 14;
 const int green_pin = 16;
 const int rotor_button_pin = A0;
@@ -16,7 +16,7 @@ const int rotor_a_pin = A1;
 const int rotor_b_pin = A2;
 const int relay_pin = A3;
 
-Button pir;
+Button intercom;
 Button red;
 Button green;
 Button rotor_button;
@@ -39,7 +39,7 @@ void setup() {
   pinMode(relay_pin, OUTPUT); digitalWrite(relay_pin, LOW);
   
   // input pints with internal pull-ups
-  pinMode(pir_pin, INPUT_PULLUP);
+  pinMode(intercom_pin, INPUT_PULLUP);
   pinMode(red_pin, INPUT_PULLUP);
   pinMode(green_pin, INPUT_PULLUP);
   pinMode(rotor_button_pin, INPUT_PULLUP);
@@ -47,7 +47,7 @@ void setup() {
   pinMode(rotor_b_pin, INPUT_PULLUP);
   
   // buttons
-  pir.initialize(pir_pin);
+  intercom.initialize(intercom_pin);
   red.initialize(red_pin);
   green.initialize(green_pin);
   rotor_button.initialize(rotor_button_pin);
@@ -119,11 +119,11 @@ void loop() {
     }
   }
 
-  pir.update();
-  if (pir.isPressed()) {
-    Serial.println("PIR_ON");
-  } else if (pir.isReleased()) {
-    Serial.println("PIR_OFF");
+  intercom.update();
+  if (intercom.isPressed()) {
+    Serial.println("INTERCOM_ON");
+  } else if (intercom.isReleased()) {
+    Serial.println("INTERCOM_OFF");
   }
 
   red.update();
