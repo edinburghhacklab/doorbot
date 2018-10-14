@@ -20,8 +20,10 @@ const int buzzer_pin = 14;
 
 char my_id[40];
 char mqtt_id[24];
-char lcd_message[33];
-char lcd_flash[33];
+char lcd_message1[17];
+char lcd_message2[17];
+char lcd_flash1[17];
+char lcd_flash2[17];
 
 LiquidCrystal_I2C lcd(0x27, 16, 2);
 WiFiClient client;
@@ -46,22 +48,27 @@ void set_message(String message, bool flash)
         line1 = message.substring(0, split_pos).substring(0, 16);
         line2 = message.substring(split_pos + 1).substring(0, 16);
     } else {
-        line1 = message.substring(0, 32);
+        line1 = message.substring(0, 16);
+        line2 = message.substring(16, 32);
     }
     if (flash) {
-        snprintf(lcd_flash, sizeof(lcd_flash), "%-16s%-16s", line1.c_str(), line2.c_str());
-        Serial.print("setting flash message: ");
-        Serial.println(lcd_flash);
-        lcd.setCursor(0, 0);
-        lcd.print(lcd_flash);
+        snprintf(lcd_flash1, sizeof(lcd_flash1), "%-16s", line1.c_str());
+        snprintf(lcd_flash2, sizeof(lcd_flash2), "%-16s", line2.c_str());
+        Serial.println("setting flash message: ");
+        Serial.println(lcd_flash1);
+        Serial.println(lcd_flash2);
+        lcd.setCursor(0, 0); lcd.print(lcd_flash1);
+        lcd.setCursor(0, 1); lcd.print(lcd_flash2);
         flash_expires = millis() + flash_time;
         flash_active = true;
     } else {
-        snprintf(lcd_message, sizeof(lcd_message), "%-16s%-16s", line1.c_str(), line2.c_str());
+        snprintf(lcd_message1, sizeof(lcd_message1), "%-16s", line1.c_str());
+        snprintf(lcd_message2, sizeof(lcd_message1), "%-16s", line2.c_str());
         Serial.print("setting normal message: ");
-        Serial.println(lcd_message);
-        lcd.setCursor(0, 0);
-        lcd.print(lcd_message);
+        Serial.println(lcd_message1);
+        Serial.println(lcd_message2);
+        lcd.setCursor(0, 0); lcd.print(lcd_message1);
+        lcd.setCursor(0, 1); lcd.print(lcd_message2);
     }
 }
 
@@ -118,7 +125,8 @@ void mqtt_callback(const char *topic, byte *payload, unsigned int length)
 void setup() {
     snprintf(my_id, sizeof(my_id), "doorbot-%06x", ESP.getChipId());
     snprintf(mqtt_id, sizeof(mqtt_id), "%08x", ESP.getChipId());
-    snprintf(lcd_message, sizeof(lcd_message), "%-32s", "");
+    snprintf(lcd_message1, sizeof(lcd_message1), "%-16s", "");
+    snprintf(lcd_message2, sizeof(lcd_message2), "%-16s", "");
 
     Serial.begin(115200);
     Serial.println();
@@ -180,7 +188,8 @@ void loop() {
             mqtt.subscribe("display/doorbot/backlight");
             mqtt.subscribe("display/doorbot/buzzer");
             lcd.clear();
-            lcd.print(lcd_message);
+            lcd.setCursor(0, 0); lcd.print(lcd_message1);
+            lcd.setCursor(0, 1); lcd.print(lcd_message2);
         } else {
             Serial.println("MQTT connection failed");
             lcd.clear();
@@ -234,8 +243,8 @@ void loop() {
 
     if (flash_active && millis() > flash_expires) {
         Serial.println("clearing flash message");
-        lcd.setCursor(0, 0);
-        lcd.print(lcd_message);
+        lcd.setCursor(0, 0); lcd.print(lcd_message1);
+        lcd.setCursor(0, 1); lcd.print(lcd_message2);
         flash_active = false;
     }
 
