@@ -4,6 +4,7 @@
 #include <LiquidCrystal_I2C.h>
 #include <Wire.h>
 #include <Bounce2.h>
+#include <Ticker.h>
 
 extern "C" {
 #include "user_interface.h"
@@ -15,6 +16,7 @@ const int sda_pin = 13;
 const int scl_pin = 12;
 const int red_button_pin = 4;
 const int green_button_pin = 5;
+const int buzzer_pin = 14;
 
 char my_id[40];
 char mqtt_id[24];
@@ -26,6 +28,7 @@ WiFiClient client;
 PubSubClient mqtt(client);
 Bounce red_button;
 Bounce green_button;
+Ticker buzzer_ticker;
 
 unsigned long last_red_down = 0;
 unsigned long last_green_down = 0;
@@ -73,18 +76,42 @@ void set_backlight(int level)
     }
 }
 
+void buzzer_callback()
+{
+    pinMode(buzzer_pin, INPUT);
+}
+
+void set_buzzer(long ms)
+{
+    if (ms <= max_buzzer_time) {
+        Serial.print("buzzing for ");
+        Serial.print(ms, DEC);
+        Serial.println("ms");
+        buzzer_ticker.once_ms(ms, buzzer_callback);
+    } else {
+        Serial.print("buzzing for ");
+        Serial.print(max_buzzer_time, DEC);
+        Serial.println("ms");
+        buzzer_ticker.once_ms(max_buzzer_time, buzzer_callback);
+    }
+    digitalWrite(buzzer_pin, LOW);
+    pinMode(buzzer_pin, OUTPUT);
+}
+
 void mqtt_callback(const char *topic, byte *payload, unsigned int length)
 {
     String ts = topic;
     String ps = (char*)payload;
     ps = ps.substring(0, length);
 
-    if (ts.equals("test/display/doorbot/message")) {
+    if (ts.equals("display/doorbot/message")) {
         set_message(ps, false);
-    } else if (ts.equals("test/display/doorbot/flash")) {
+    } else if (ts.equals("display/doorbot/flash")) {
         set_message(ps, true);
-    } else if (ts.equals("test/display/doorbot/backlight")) {
+    } else if (ts.equals("display/doorbot/backlight")) {
         set_backlight(ps.toInt());
+    } else if (ts.equals("display/doorbot/buzzer")) {
+        set_buzzer(ps.toInt());
     }
 }
 
@@ -144,13 +171,14 @@ void loop() {
     }
 
     if (!mqtt.connected()) {
-        if (mqtt.connect(mqtt_id, "test/display/doorbot/connected", 1, true, "0")) {
+        if (mqtt.connect(mqtt_id, "display/doorbot/connected", 1, true, "0")) {
             Serial.println("MQTT up");
-            mqtt.publish((const char*)"test/display/doorbot/connected", (const uint8_t*)"1", true);
-            mqtt.subscribe("test/display/doorbot/message");
-            mqtt.subscribe("test/display/doorbot/flash");
-            mqtt.subscribe("test/display/doorbot/contrast");
-            mqtt.subscribe("test/display/doorbot/backlight");
+            mqtt.publish((const char*)"display/doorbot/connected", (const uint8_t*)"1", true);
+            mqtt.subscribe("display/doorbot/message");
+            mqtt.subscribe("display/doorbot/flash");
+            mqtt.subscribe("display/doorbot/contrast");
+            mqtt.subscribe("display/doorbot/backlight");
+            mqtt.subscribe("display/doorbot/buzzer");
             lcd.clear();
             lcd.print(lcd_message);
         } else {
@@ -166,42 +194,42 @@ void loop() {
 
     if (red_button.rose()) {
         Serial.println("red up");
-        mqtt.publish("test/display/doorbot/buttons/red/state", "up");
+        mqtt.publish("display/doorbot/buttons/red/state", "up");
         if (millis() - last_red_down < long_press_time) {
             Serial.println("red shortpress");
-            mqtt.publish("test/display/doorbot/buttons/red/shortpress", "");
+            mqtt.publish("display/doorbot/buttons/red/shortpress", "");
         }
         red_is_long_pressed = false;
     } else if (red_button.fell()) {
         last_red_down = millis();
         Serial.println("red down");
-        mqtt.publish("test/display/doorbot/buttons/red/state", "down");
+        mqtt.publish("display/doorbot/buttons/red/state", "down");
     }
 
     if (green_button.rose()) {
         Serial.println("green up");
-        mqtt.publish("test/display/doorbot/buttons/green/state", "up");
+        mqtt.publish("display/doorbot/buttons/green/state", "up");
         if (millis() - last_green_down < long_press_time) {
             Serial.println("green shortpress");
-            mqtt.publish("test/display/doorbot/buttons/green/shortpress", "");
+            mqtt.publish("display/doorbot/buttons/green/shortpress", "");
         }
         green_is_long_pressed = false;
     } else if (green_button.fell()) {
         last_green_down = millis();
         Serial.println("green down");
-        mqtt.publish("test/display/doorbot/buttons/green/state", "down");
+        mqtt.publish("display/doorbot/buttons/green/state", "down");
     }
 
     if ((!red_is_long_pressed) && red_button.read() == LOW && red_button.duration() > long_press_time) {
         red_is_long_pressed = true;
         Serial.println("red longpress");
-        mqtt.publish("test/display/doorbot/buttons/red/longpress", "");
+        mqtt.publish("display/doorbot/buttons/red/longpress", "");
     }
 
     if ((!green_is_long_pressed) && green_button.read() == LOW && green_button.duration() > long_press_time) {
         green_is_long_pressed = true;
         Serial.println("green longpress");
-        mqtt.publish("test/display/doorbot/buttons/green/longpress", "");
+        mqtt.publish("display/doorbot/buttons/green/longpress", "");
     }
 
     if (flash_active && millis() > flash_expires) {

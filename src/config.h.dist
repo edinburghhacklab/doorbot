@@ -4,3 +4,4 @@ const char *mqtt_server = "mqtt";
 const int mqtt_port = 1883;
 const long long_press_time = 1000;
 const long flash_time = 2000;
+const long max_buzzer_time = 1000;
